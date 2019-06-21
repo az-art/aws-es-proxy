@@ -1,0 +1,58 @@
+version: 2
+jobs:
+  build:
+    docker:
+      - image: circleci/golang:1.9
+    working_directory: /go/src/github.com/az-art/aws-es-proxy
+    steps:
+      - checkout
+      - run: go get -u github.com/golang/dep/cmd/dep
+      - run:
+          name: build app
+          command: |
+            dep ensure
+            go build -v ./cmd/server
+  deploy:
+    docker:
+      - image: circleci/golang:1.9
+    working_directory: /go/src/github.com/az-art/aws-es-proxy
+    steps:
+      - checkout
+      - setup_remote_docker:
+          docker_layer_caching: true
+      - run: go get -u github.com/mitchellh/gox
+      - run: go get -u github.com/tcnksm/ghr
+      - run: go get -u github.com/stevenmatthewt/semantics
+      - run:
+          name: Create release tag
+          command: |
+            make create_release_tag
+      - run:
+          name: Build binaries
+          command: |
+            make build_bins
+      - add_ssh_keys
+      - run:
+          name: Create GitHub release
+          command: |
+            make push_github
+      - run:
+          name: Build docker image
+          command: |
+            make build_image
+      - run:
+          name: Create DockerHub release
+          command: |
+            make push_dockerhub
+
+workflows:
+  version: 2
+  build-deploy:
+    jobs:
+      - build
+      - deploy:
+          requires:
+            - build
+          filters:
+            branches:
+              only: master
