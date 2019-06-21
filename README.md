@@ -95,3 +95,5 @@ Usage of ./aws-es-proxy:
   -v
         Print user requests
 ```
+
+---
